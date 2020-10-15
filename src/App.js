@@ -1,10 +1,19 @@
 import React from 'react';
+import { Route, Router, Switch } from 'react-router-dom';
+import Main from 'views/Main';
+import { createBrowserHistory } from 'history';
+
+const history = createBrowserHistory();
 
 const App = () => {
   return (
-    <React.Fragment>
-      <h1>Hola mundo</h1>
-    </React.Fragment>
+    <Router history={history}>
+      <Switch>
+        <Route exact path='/'>
+          <Main />
+        </Route>
+      </Switch>
+    </Router>
   );
 };
 
