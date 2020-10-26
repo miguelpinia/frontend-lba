@@ -5,11 +5,9 @@ import React from 'react';
 const Grafica = ({ classes, ...props }) => {
   return (
     <React.Fragment>
-      <Grid item xs={12} sm={6}>
-        <Paper className={classes.fullDiv}>
-          <h2> Gráfica simple</h2>
-        </Paper>
-      </Grid>
+      <Paper className={classes.fullDiv}>
+        <h2> Gráfica simple</h2>
+      </Paper>
     </React.Fragment>
   );
 };

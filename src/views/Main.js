@@ -1,4 +1,3 @@
-import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Config from './Config';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -81,8 +80,40 @@ const useStyles = makeStyles((theme) => ({
   fullDiv: {
     padding: theme.spacing(2),
     height: '100%'
+  },
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: '95%'
+  },
+  listRoot: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: theme.palette.background.paper
   }
 }));
+
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role='tabpanel'
+      hidden={value !== index}
+      id={`scrollable-auto-tabpanel-${index}`}
+      aria-labelledby={`scrollable-auto-tab-${index}`}
+      {...other}>
+      {value === index && (
+        <div
+          style={{
+            paddingTop: '1%',
+            height: '85vh'
+          }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Main = (props) => {
   const classes = useStyles();
@@ -93,29 +124,6 @@ const Main = (props) => {
   const handleChange = (event, newValue) => setValue(newValue);
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
-
-  function TabPanel(props) {
-    const { children, value, index, ...other } = props;
-
-    return (
-      <div
-        role='tabpanel'
-        hidden={value !== index}
-        id={`scrollable-auto-tabpanel-${index}`}
-        aria-labelledby={`scrollable-auto-tab-${index}`}
-        {...other}>
-        {value === index && (
-          <div
-            style={{
-              paddingTop: '1%',
-              height: '85vh'
-            }}>
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   const a11yProps = (index) => ({
     id: `scrollable-auto-tab-${index}`,
@@ -151,36 +159,19 @@ const Main = (props) => {
             </Tabs>
           </Paper>
           <TabPanel value={value} index={0}>
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(1, 1fr)',
-                gridTemplateRows: '15% auto',
-                gridGap: '30px',
-                justifyContent: 'stretch'
-              }}>
-              <Config classes={classes} />
-              <div
-                style={{
-                  gridColumn: '1',
-                  gridRow: '2'
-                }}>
-                <div className={classes.fullDiv}>
-                  <Grid
-                    container
-                    spacing={3}
-                    style={{
-                      height: '100%',
-                      flexGrow: 1
-                    }}>
-                    <Grafica classes={classes} />
-                    <Datos classes={classes} />
-                  </Grid>
-                </div>
-              </div>
-            </div>
+            <Grid container spacing={3} alignItems='stretch' direction='row'>
+              <Grid item container spacing={3} alignItems='stretch'>
+                <Grid item xs={12} sm={4}>
+                  <Config classes={classes} />
+                </Grid>
+                <Grid item xs={12} sm={8}>
+                  <Grafica classes={classes} />
+                </Grid>
+              </Grid>
+              <Grid item xs={12} sm={12}>
+                <Datos classes={classes} />
+              </Grid>
+            </Grid>
           </TabPanel>
           <TabPanel value={value} index={1}>
             <div>
