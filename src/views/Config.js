@@ -1,4 +1,5 @@
-import Box from '@material-ui/core/Box';
+import axios from 'axios';
+import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import CommentIcon from '@material-ui/icons/Comment';
 import FormControl from '@material-ui/core/FormControl';
@@ -17,9 +18,12 @@ import React from 'react';
 import Select from '@material-ui/core/Select';
 import TextField from '@material-ui/core/TextField';
 import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
+import * as R from 'ramda';
+import { median, mean, std } from 'mathjs';
+import { StateContext } from 'state/StateProvider';
 
 const Config = ({ classes, ...props }) => {
-  const [algoritmo, setAlgoritmo] = React.useState('');
   const [experimento, setExperimento] = React.useState('');
   const [checked, setChecked] = React.useState([]);
   const [opcionesAlg, setOpcionesAlg] = React.useState(0);
@@ -32,6 +36,9 @@ const Config = ({ classes, ...props }) => {
   const [dsSize, setDsSize] = React.useState();
   const [workers, setWorkers] = React.useState();
   const [stealers, setStealers] = React.useState();
+  const context = React.useContext(StateContext);
+  const state = context.state;
+  const dispatch = context.dispatch;
 
   const handleChangeSS = (event) => {
     setStepSpanning(event.target.value);
@@ -69,59 +76,161 @@ const Config = ({ classes, ...props }) => {
     else setOpcionesAlg(3);
   };
 
+  const stats = (results) => {
+    const procs = results.processors;
+    const execs = results.executions;
+    const iters = results.iterations;
+    const algs = results.algorithms;
+    let vals = algs.reduce((obj, x) => {
+      obj[x] = {};
+      return obj;
+    }, {});
+    for (const proc of Array(procs).keys()) {
+      const thread = execs[`thread-${proc}`];
+      for (const alg of algs) {
+        const iterations = Array.from(Array(iters).keys());
+        const data_alg = thread[alg];
+        const data_execs = data_alg['data'];
+        const exec_time = iterations.map(
+          (iter) => data_execs[`${iter}`]['executionTime']
+        );
+        const takes = iterations.map((iter) => data_execs[`${iter}`]['takes']);
+        const puts = iterations.map((iter) => data_execs[`${iter}`]['puts']);
+        const steals = iterations.map(
+          (iter) => data_execs[`${iter}`]['steals']
+        );
+        vals[alg][proc] = {
+          median: {
+            time: median(exec_time),
+            takes: median(takes),
+            puts: median(puts),
+            steals: median(steals)
+          },
+          average: {
+            time: mean(exec_time),
+            takes: mean(takes),
+            puts: mean(puts),
+            steals: mean(steals)
+          },
+          std: {
+            time: std(exec_time),
+            takes: std(takes),
+            puts: std(puts),
+            steals: std(steals)
+          }
+        };
+        // const exec_time =
+      }
+    }
+    let data = { time: {}, steals: {}, puts: {}, takes: {} };
+    let time = [];
+    for (const proc of Array(procs).keys()) {
+      let obj = { name: `Hilos: ${proc + 1}` };
+      for (const alg of algs) {
+        obj[alg] = vals[alg][`${proc}`].average.time;
+      }
+      time.push(obj);
+    }
+    // console.log('obj', time);
+    // console.log(vals);
+    return time;
+  };
+
+  const onSubmitExperiment = async () => {
+    if (opcionesAlg === 1) {
+      console.log(
+        checked,
+        stepSpanning,
+        grafica,
+        vertexSize,
+        iterations,
+        directed
+      );
+      dispatch({ type: 'UPDATE_ALGS', payload: checked });
+      await axios
+        .post('/spanningTree', {
+          data: {
+            algorithms: checked,
+            spanningTreeOptions: {
+              graphType: grafica,
+              vertexSize,
+              stepSpanningType: stepSpanning,
+              iterations,
+              directed,
+              stealTime: false
+            }
+          }
+        })
+        .then((response) => {
+          // console.log(response.data.ejecucion);
+          const ejecucion = response.data.ejecucion;
+          const vals = stats(ejecucion);
+          console.log('Valores para gráfica', vals);
+          dispatch({ type: 'UPDATE_DATA', payload: vals });
+          // dispatch({type: 'UPDATE_DATA', payload: response.data.ejecu})
+        })
+        .catch((err) => console.log(err));
+    }
+  };
+
   return (
     <React.Fragment>
       <Grid container spacing={3} alignItems='stretch'>
         <Grid item xs={12} sm={6}>
           <Paper className={classes.fullDiv}>
-            <h5>Algoritmos</h5>
-            <List className={classes.listRoot}>
-              {[
-                'CILK',
-                'CHASELEV',
-                'IDEMPOTENT_FIFO',
-                'IDEMPOTENT_LIFO',
-                'IDEMPOTENT_DEQUE',
-                'WS_NC_MULT',
-                'B_WS_NC_MULT',
-                'WS_NC_MULT_LA',
-                'B_WS_NC_MULT_LA',
-                'NEW_B_WS_NC_MULT',
-                'NEW_B_WS_NC_MULT_LA'
-              ].map((algorithm) => {
-                const labelId = `checkbox-list-label-${algorithm}`;
+            <Grid item container>
+              <Grid item xs={12}>
+                <Typography variant='h6' gutterBottom>
+                  Algoritmos
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <List className={classes.listRoot}>
+                  {[
+                    'CILK',
+                    'CHASELEV',
+                    'IDEMPOTENT_FIFO',
+                    'IDEMPOTENT_LIFO',
+                    'IDEMPOTENT_DEQUE',
+                    'WS_NC_MULT',
+                    'B_WS_NC_MULT',
+                    'WS_NC_MULT_LA',
+                    'B_WS_NC_MULT_LA',
+                    'NEW_B_WS_NC_MULT',
+                    'NEW_B_WS_NC_MULT_LA'
+                  ].map((algorithm) => {
+                    const labelId = `checkbox-list-label-${algorithm}`;
 
-                return (
-                  <ListItem
-                    key={algorithm}
-                    role={undefined}
-                    dense
-                    button
-                    onClick={handleToggle(algorithm)}>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge='start'
-                        checked={checked.indexOf(algorithm) !== -1}
-                        tabIndex={-1}
-                        disableRipple
-                        inputProps={{ 'aria-labelledby': labelId }}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      id={labelId}
-                      primary={algorithm.replace('_', ' ')}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton edge='end' aria-label='descripción'>
-                        <Tooltip title='Descripción' placement='top'>
-                          <CommentIcon />
-                        </Tooltip>
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                );
-              })}
-            </List>
+                    return (
+                      <ListItem
+                        key={algorithm}
+                        role={undefined}
+                        dense
+                        button
+                        onClick={handleToggle(algorithm)}>
+                        <ListItemIcon>
+                          <Checkbox
+                            edge='start'
+                            checked={checked.indexOf(algorithm) !== -1}
+                            tabIndex={-1}
+                            disableRipple
+                            inputProps={{ 'aria-labelledby': labelId }}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          id={labelId}
+                          primary={
+                            <Typography variant='subtitle2' gutterBottom>
+                              {algorithm.replace('_', ' ')}
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
         <Grid item container xs={12} sm={6}>
@@ -129,8 +238,28 @@ const Config = ({ classes, ...props }) => {
             elevation={1}
             className={classes.fullDiv}
             style={{ minWidth: '100%' }}>
+            <Grid item container>
+              <Grid item xs={12} sm={6}>
+                <Typography
+                  variant='h6'
+                  gutterBottom
+                  style={{ marginLeft: 15 }}>
+                  Opciones
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  variant='contained'
+                  color='secondary'
+                  size='small'
+                  disabled={opcionesAlg === 0}
+                  style={{ marginLeft: 30 }}
+                  onClick={onSubmitExperiment}>
+                  Ejecutar
+                </Button>
+              </Grid>
+            </Grid>
             <Grid item xs={12}>
-              <h5>Opciones</h5>
               <FormControl className={classes.formControl} variant='outlined'>
                 <InputLabel id='experimentos-select-label'>
                   Experimentos
@@ -190,7 +319,6 @@ const Config = ({ classes, ...props }) => {
                     variant='outlined'
                     style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
                     value={vertexSize}
-                    label='vertexSize'
                     label='Vertex Size'
                     type='number'
                     onChange={(event) => setVertexSize(event.target.value)}
