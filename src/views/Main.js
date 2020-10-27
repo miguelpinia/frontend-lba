@@ -11,6 +11,7 @@ import Tabs from '@material-ui/core/Tabs';
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 import Grafica from './Grafica';
 import Datos from './Datos';
+import { StateProvider } from 'state/StateProvider';
 
 const drawerWidth = 240;
 
@@ -132,55 +133,57 @@ const Main = (props) => {
 
   return (
     <React.Fragment>
-      <div className={classes.root}>
-        <CssBaseline />
-        <NavBar
-          classes={classes}
-          open={open}
-          handleDrawerOpen={handleDrawerOpen}
-        />
-        <Lateral
-          classes={classes}
-          open={open}
-          handleDrawerClose={handleDrawerClose}
-          theme={theme}
-        />
-        <main className={classes.content}>
-          <div className={classes.toolbar} />
-          <Paper className={classes.tabs}>
-            <Tabs
-              value={value}
-              onChange={handleChange}
-              indicatorColor='primary'
-              textColor='primary'
-              centered>
-              <Tab label='Experimentos' {...a11yProps(0)} />
-              <Tab label='Gráficas' {...a11yProps(1)} />
-            </Tabs>
-          </Paper>
-          <TabPanel value={value} index={0}>
-            <Grid container spacing={3} alignItems='stretch' direction='row'>
-              <Grid item container spacing={3} alignItems='stretch'>
-                <Grid item xs={12} sm={4}>
-                  <Config classes={classes} />
+      <StateProvider>
+        <div className={classes.root}>
+          <CssBaseline />
+          <NavBar
+            classes={classes}
+            open={open}
+            handleDrawerOpen={handleDrawerOpen}
+          />
+          <Lateral
+            classes={classes}
+            open={open}
+            handleDrawerClose={handleDrawerClose}
+            theme={theme}
+          />
+          <main className={classes.content}>
+            <div className={classes.toolbar} />
+            <Paper className={classes.tabs}>
+              <Tabs
+                value={value}
+                onChange={handleChange}
+                indicatorColor='primary'
+                textColor='primary'
+                centered>
+                <Tab label='Experimentos' {...a11yProps(0)} />
+                <Tab label='Gráficas' {...a11yProps(1)} />
+              </Tabs>
+            </Paper>
+            <TabPanel value={value} index={0}>
+              <Grid container spacing={3} alignItems='stretch' direction='row'>
+                <Grid item container spacing={3} alignItems='stretch'>
+                  <Grid item xs={12} sm={4}>
+                    <Config classes={classes} />
+                  </Grid>
+                  <Grid item xs={12} sm={8}>
+                    <Grafica classes={classes} />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} sm={8}>
-                  <Grafica classes={classes} />
+                <Grid item xs={12} sm={12}>
+                  <Datos classes={classes} />
                 </Grid>
               </Grid>
-              <Grid item xs={12} sm={12}>
-                <Datos classes={classes} />
-              </Grid>
-            </Grid>
-          </TabPanel>
-          <TabPanel value={value} index={1}>
-            <div>
-              <h1>Gráficas</h1>
-              <Button>Aquí se despliegan gráficas mamalonas</Button>
-            </div>
-          </TabPanel>
-        </main>
-      </div>
+            </TabPanel>
+            <TabPanel value={value} index={1}>
+              <div>
+                <h1>Gráficas</h1>
+                <Button>Aquí se despliegan gráficas mamalonas</Button>
+              </div>
+            </TabPanel>
+          </main>
+        </div>
+      </StateProvider>
     </React.Fragment>
   );
 };
