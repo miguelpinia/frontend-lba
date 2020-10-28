@@ -136,7 +136,7 @@ const BarPutsTakesSteals = ({ state, ...props }) => {
   return (
     <React.Fragment>
       <BarChart
-        width={1100}
+        width={1050}
         height={500}
         data={data}
         margin={{
