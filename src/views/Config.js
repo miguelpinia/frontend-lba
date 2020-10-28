@@ -105,6 +105,8 @@ const Config = ({ classes, ...props }) => {
   const state = context.state;
   const dispatch = context.dispatch;
 
+  const ip = 'http://192.168.0.19:3003';
+
   const handleChangeSS = (event) => {
     setStepSpanning(event.target.value);
   };
@@ -146,7 +148,7 @@ const Config = ({ classes, ...props }) => {
     dispatch({ type: 'UPDATE_WAIT', payload: 'GET' });
     if (state.variant === 1) {
       await axios
-        .post('http://127.0.0.1:3003/spanningTree', {
+        .post(ip + '/spanningTree', {
           data: {
             algorithms: checked,
             spanningTreeOptions: {
@@ -168,7 +170,7 @@ const Config = ({ classes, ...props }) => {
         .catch((err) => console.log(err.response));
     } else if (state.variant === 2) {
       await axios
-        .post('http://127.0.0.1:3003/putsSteals', {
+        .post(ip + '/putsSteals', {
           data: {
             algorithms: checked,
             putSteals: {
@@ -187,7 +189,7 @@ const Config = ({ classes, ...props }) => {
         .catch((err) => console.log(err.response));
     } else if (state.variant === 3) {
       await axios
-        .post('http://127.0.0.1:3003/putsTakes', {
+        .post(ip + '/putsTakes', {
           data: {
             algorithms: checked,
             putTakes: {
@@ -206,7 +208,7 @@ const Config = ({ classes, ...props }) => {
         .catch((err) => console.log(err.response));
     } else if (state.variant === 4) {
       await axios
-        .post('http://127.0.0.1:3003/putsTakesSteals', {
+        .post(ip + '/putsTakesSteals', {
           data: {
             algorithms: checked,
             putsTakesSteals: {
