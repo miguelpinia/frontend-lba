@@ -1,3 +1,10 @@
+import LinearProgress from '@material-ui/core/LinearProgress';
+import Grid from '@material-ui/core/Grid';
+import FormControl from '@material-ui/core/FormControl';
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
+import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
 import React from 'react';
 import {
@@ -11,43 +18,25 @@ import {
 } from 'recharts';
 import { StateContext } from 'state/StateProvider';
 
-const Basic = (props) => {
-  const context = React.useContext(StateContext);
-  const state = context.state;
-  const data = state.data;
-
-  const initialState = {
-    data,
-    left: 'dataMin',
-    right: 'dataMax',
-    refAreaLeft: '',
-    refAreaRight: '',
-    top: 'dataMax+1',
-    bottom: 'dataMin-1',
-    top2: 'dataMax+20',
-    bottom2: 'dataMin-20',
-    animation: true
-  };
-
+const Basic = ({ data, state, ...props }) => {
   return (
-    <div>
+    <React.Fragment>
       <LineChart
-        width={900}
-        height={600}
-        data={state.data}
+        width={1100}
+        height={500}
+        data={data}
         margin={{
           top: 5,
           right: 30,
           left: 20,
-          bottom: 5
+          bottom: 30
         }}>
         <CartesianGrid strokeDasharray='3 3' />
         <XAxis dataKey='name' padding={{ left: 50, right: 50 }} />
-        <YAxis />
+        <YAxis domain={['auto', 'auto']} />
         <Tooltip />
-        <Legend />
+        <Legend verticalAlign='top' height={36} />
 
-        {console.log('algs', state.algs)}
         {state.algs?.map((alg) => (
           <Line
             key={alg}
@@ -56,26 +45,116 @@ const Basic = (props) => {
             stroke={state.colors[alg]}
           />
         ))}
-
-        {/* <Line */}
-        {/*   type='monotone' */}
-        {/*   dataKey='CHASELEV' */}
-        {/*   stroke='#8884d8' */}
-        {/*   activeDot={{ r: 8 }} */}
-        {/* /> */}
-        {/* <Line type='monotone' dataKey='uv' stroke='#82ca' /> */}
-        {/* <Line type='monotone' dataKey='amt' stroke='#82ca9d' /> */}
       </LineChart>
-    </div>
+    </React.Fragment>
   );
 };
 
 const Grafica = ({ classes, ...props }) => {
+  const context = React.useContext(StateContext);
+  const state = context.state;
+  const dispatch = context.dispatch;
+  const [data, setData] = React.useState(state.data);
+  const [tipo, setTipo] = React.useState('');
+  const [title, setTitle] = React.useState('Gráfica');
+
+  const handleChangeGraph = (event) => {
+    switch (event.target.value) {
+      case 'time':
+        setTitle('Gráfica de promedio de tiempo');
+        setTipo(event.target.value);
+        break;
+      case 'takes':
+        setTitle('Gráfica de promedio de takes');
+        setTipo(event.target.value);
+        break;
+      case 'puts':
+        setTitle('Gráfica de promedio de puts');
+        setTipo(event.target.value);
+        break;
+      case 'steals':
+        setTitle('Gráfica de promedio de steals');
+        setTipo(event.target.value);
+        break;
+      default:
+        setTipo('');
+        setTitle('Gráfica');
+    }
+  };
+
+  React.useEffect(() => {
+    if (state.wait === 'RECEIVED') {
+      setTipo('time');
+      setData(state.data.time);
+      dispatch({ type: 'UPDATE_WAIT', payload: 'WAIT' });
+      return;
+    }
+    switch (tipo) {
+      case 'time':
+        setData(state.data.time);
+        break;
+      case 'takes':
+        setData(state.data.takes);
+        break;
+      case 'puts':
+        setData(state.data.puts);
+        break;
+      case 'steals':
+        setData(state.data.steals);
+        break;
+      default:
+    }
+  }, [state.data, tipo, state.wait]);
+
   return (
     <React.Fragment>
       <Paper className={classes.fullDiv}>
-        <h2> Gráfica simple</h2>
-        <Basic />
+        <Grid container spacing={3} alignItems='stretch'>
+          {state.wait === 'GET' ? (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <div style={{ marginTop: '25%' }}>
+                  <div style={{ marginLeft: '37%' }}>
+                    <Typography variant='subtitle1' gutterBottom>
+                      Ejecutando experimento, espere por favor
+                    </Typography>
+                  </div>
+                  <div style={{ maxWidth: '80%', marginLeft: '10%' }}>
+                    <LinearProgress />
+                  </div>
+                </div>
+              </Grid>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Grid item xs={12} sm={6}>
+                <Typography variant='h6' gutterBottom>
+                  {title}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl className={classes.formControl} variant='outlined'>
+                  <InputLabel id='tipos-label'>Tipo de Gráfica</InputLabel>
+                  <Select
+                    disabled={state.data.time === undefined}
+                    labelId='tipos-label'
+                    value={tipo}
+                    onChange={handleChangeGraph}
+                    label='Tipo de Gráfica'>
+                    <MenuItem value={''}>Selecciona una opción</MenuItem>
+                    <MenuItem value='time'>Gráfica de tiempo</MenuItem>
+                    <MenuItem value='takes'>Gráfica de takes</MenuItem>
+                    <MenuItem value='puts'>Gráfica de puts</MenuItem>
+                    <MenuItem value='steals'>Gráfica de steals</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <Basic state={state} data={data} />
+              </Grid>
+            </React.Fragment>
+          )}
+        </Grid>
       </Paper>
     </React.Fragment>
   );
