@@ -18,6 +18,76 @@ import Typography from '@material-ui/core/Typography';
 import { median, mean, std } from 'mathjs';
 import { StateContext } from 'state/StateProvider';
 
+const stats = (results) => {
+  const procs = results.processors;
+  const execs = results.executions;
+  const iters = results.iterations;
+  const algs = results.algorithms;
+  let vals = algs.reduce((obj, x) => {
+    obj[x] = {};
+    return obj;
+  }, {});
+  for (const proc of Array(procs).keys()) {
+    const thread = execs[`thread-${proc}`];
+    for (const alg of algs) {
+      const iterations = Array.from(Array(iters).keys());
+      const data_alg = thread[alg];
+      const data_execs = data_alg['data'];
+      const exec_time = iterations.map(
+        (iter) => data_execs[`${iter}`]['executionTime']
+      );
+      const takes = iterations.map((iter) => data_execs[`${iter}`]['takes']);
+      const puts = iterations.map((iter) => data_execs[`${iter}`]['puts']);
+      const steals = iterations.map((iter) => data_execs[`${iter}`]['steals']);
+      vals[alg][proc] = {
+        median: {
+          time: median(exec_time),
+          takes: median(takes),
+          puts: median(puts),
+          steals: median(steals)
+        },
+        average: {
+          time: mean(exec_time),
+          takes: mean(takes),
+          puts: mean(puts),
+          steals: mean(steals)
+        },
+        std: {
+          time: std(exec_time),
+          takes: std(takes),
+          puts: std(puts),
+          steals: std(steals)
+        }
+      };
+      // const exec_time =
+    }
+  }
+  let data = { time: [], steals: [], puts: [], takes: [] };
+  for (const proc of Array(procs).keys()) {
+    let time = { name: `Hilos: ${proc + 1}` };
+    for (const alg of algs) {
+      time[alg] = vals[alg][`${proc}`].average.time;
+    }
+    data.time.push(time);
+    let takes = { name: `Hilos: ${proc + 1}` };
+    for (const alg of algs) {
+      takes[alg] = vals[alg][`${proc}`].average.takes;
+    }
+    data.takes.push(takes);
+    let puts = { name: `Hilos: ${proc + 1}` };
+    for (const alg of algs) {
+      puts[alg] = vals[alg][`${proc}`].average.puts;
+    }
+    data.puts.push(puts);
+    let steals = { name: `Hilos: ${proc + 1}` };
+    for (const alg of algs) {
+      steals[alg] = vals[alg][`${proc}`].average.steals;
+    }
+    data.steals.push(steals);
+  }
+  return data;
+};
+
 const Config = ({ classes, ...props }) => {
   const [experimento, setExperimento] = React.useState('');
   const [checked, setChecked] = React.useState([]);
@@ -71,78 +141,6 @@ const Config = ({ classes, ...props }) => {
     )
       dispatch({ type: 'UPDATE_VARIANT', payload: 2 });
     else dispatch({ type: 'UPDATE_VARIANT', payload: 3 });
-  };
-
-  const stats = (results) => {
-    const procs = results.processors;
-    const execs = results.executions;
-    const iters = results.iterations;
-    const algs = results.algorithms;
-    let vals = algs.reduce((obj, x) => {
-      obj[x] = {};
-      return obj;
-    }, {});
-    for (const proc of Array(procs).keys()) {
-      const thread = execs[`thread-${proc}`];
-      for (const alg of algs) {
-        const iterations = Array.from(Array(iters).keys());
-        const data_alg = thread[alg];
-        const data_execs = data_alg['data'];
-        const exec_time = iterations.map(
-          (iter) => data_execs[`${iter}`]['executionTime']
-        );
-        const takes = iterations.map((iter) => data_execs[`${iter}`]['takes']);
-        const puts = iterations.map((iter) => data_execs[`${iter}`]['puts']);
-        const steals = iterations.map(
-          (iter) => data_execs[`${iter}`]['steals']
-        );
-        vals[alg][proc] = {
-          median: {
-            time: median(exec_time),
-            takes: median(takes),
-            puts: median(puts),
-            steals: median(steals)
-          },
-          average: {
-            time: mean(exec_time),
-            takes: mean(takes),
-            puts: mean(puts),
-            steals: mean(steals)
-          },
-          std: {
-            time: std(exec_time),
-            takes: std(takes),
-            puts: std(puts),
-            steals: std(steals)
-          }
-        };
-        // const exec_time =
-      }
-    }
-    let data = { time: [], steals: [], puts: [], takes: [] };
-    for (const proc of Array(procs).keys()) {
-      let time = { name: `Hilos: ${proc + 1}` };
-      for (const alg of algs) {
-        time[alg] = vals[alg][`${proc}`].average.time;
-      }
-      data.time.push(time);
-      let takes = { name: `Hilos: ${proc + 1}` };
-      for (const alg of algs) {
-        takes[alg] = vals[alg][`${proc}`].average.takes;
-      }
-      data.takes.push(takes);
-      let puts = { name: `Hilos: ${proc + 1}` };
-      for (const alg of algs) {
-        puts[alg] = vals[alg][`${proc}`].average.puts;
-      }
-      data.puts.push(puts);
-      let steals = { name: `Hilos: ${proc + 1}` };
-      for (const alg of algs) {
-        steals[alg] = vals[alg][`${proc}`].average.steals;
-      }
-      data.steals.push(steals);
-    }
-    return data;
   };
 
   const onSubmitExperiment = async () => {
@@ -418,7 +416,10 @@ const Config = ({ classes, ...props }) => {
                   </Grid>
                 </React.Fragment>
               )}
-              <Grid item xs={12}>
+              <Grid
+                item
+                xs={12}
+                style={{ marginTop: state.variant > 1 && '15px' }}>
                 <Button
                   variant='contained'
                   color='secondary'
