@@ -34,7 +34,8 @@ const initialState = {
   },
   rawResponse: {},
   wait: 'WAIT',
-  variant: 0
+  variant: 0,
+  bardata: []
 };
 
 const reducer = (state, action) => {
@@ -49,6 +50,8 @@ const reducer = (state, action) => {
       return { ...state, wait: action.payload };
     case 'UPDATE_VARIANT':
       return { ...state, variant: action.payload };
+    case 'UPDATE_BARDATA':
+      return { ...state, bardata: action.payload };
     default:
       throw new Error(`Acción no soportada ${action.type}`);
   }
