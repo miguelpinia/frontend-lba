@@ -1,25 +1,20 @@
 import axios from 'axios';
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
-import CommentIcon from '@material-ui/icons/Comment';
 import FormControl from '@material-ui/core/FormControl';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
-import IconButton from '@material-ui/core/IconButton';
 import InputLabel from '@material-ui/core/InputLabel';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import ListItemText from '@material-ui/core/ListItemText';
 import MenuItem from '@material-ui/core/MenuItem';
 import Paper from '@material-ui/core/Paper';
 import React from 'react';
 import Select from '@material-ui/core/Select';
 import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
-import * as R from 'ramda';
 import { median, mean, std } from 'mathjs';
 import { StateContext } from 'state/StateProvider';
 
@@ -30,12 +25,13 @@ const Config = ({ classes, ...props }) => {
   const [grafica, setGrafica] = React.useState('');
   const [directed, setDirected] = React.useState(null);
   const [stepSpanning, setStepSpanning] = React.useState('');
-  const [vertexSize, setVertexSize] = React.useState();
+  const [vertexSize, setVertexSize] = React.useState(0);
   const [iterations, setIterations] = React.useState(5);
   const [operations, setOperations] = React.useState();
   const [dsSize, setDsSize] = React.useState();
   const [workers, setWorkers] = React.useState();
   const [stealers, setStealers] = React.useState();
+  const [structSize, setStructSize] = React.useState(4096);
   const context = React.useContext(StateContext);
   const state = context.state;
   const dispatch = context.dispatch;
@@ -66,14 +62,15 @@ const Config = ({ classes, ...props }) => {
   const handleChangeAlg = (event) => {
     setExperimento(event.target.value);
     if (event.target.value === undefined || event.target.value === '')
-      setOpcionesAlg(0);
-    else if (event.target.value === 'SPANNING_TREE') setOpcionesAlg(1);
+      dispatch({ type: 'UPDATE_VARIANT', payload: 0 });
+    else if (event.target.value === 'SPANNING_TREE')
+      dispatch({ type: 'UPDATE_VARIANT', payload: 1 });
     else if (
       event.target.value === 'putSteals' ||
       event.target.value === 'putTakes'
     )
-      setOpcionesAlg(2);
-    else setOpcionesAlg(3);
+      dispatch({ type: 'UPDATE_VARIANT', payload: 2 });
+    else dispatch({ type: 'UPDATE_VARIANT', payload: 3 });
   };
 
   const stats = (results) => {
@@ -122,22 +119,34 @@ const Config = ({ classes, ...props }) => {
         // const exec_time =
       }
     }
-    let data = { time: {}, steals: {}, puts: {}, takes: {} };
-    let time = [];
+    let data = { time: [], steals: [], puts: [], takes: [] };
     for (const proc of Array(procs).keys()) {
-      let obj = { name: `Hilos: ${proc + 1}` };
+      let time = { name: `Hilos: ${proc + 1}` };
       for (const alg of algs) {
-        obj[alg] = vals[alg][`${proc}`].average.time;
+        time[alg] = vals[alg][`${proc}`].average.time;
       }
-      time.push(obj);
+      data.time.push(time);
+      let takes = { name: `Hilos: ${proc + 1}` };
+      for (const alg of algs) {
+        takes[alg] = vals[alg][`${proc}`].average.takes;
+      }
+      data.takes.push(takes);
+      let puts = { name: `Hilos: ${proc + 1}` };
+      for (const alg of algs) {
+        puts[alg] = vals[alg][`${proc}`].average.puts;
+      }
+      data.puts.push(puts);
+      let steals = { name: `Hilos: ${proc + 1}` };
+      for (const alg of algs) {
+        steals[alg] = vals[alg][`${proc}`].average.steals;
+      }
+      data.steals.push(steals);
     }
-    // console.log('obj', time);
-    // console.log(vals);
-    return time;
+    return data;
   };
 
   const onSubmitExperiment = async () => {
-    if (opcionesAlg === 1) {
+    if (state.variant === 1) {
       console.log(
         checked,
         stepSpanning,
@@ -147,8 +156,9 @@ const Config = ({ classes, ...props }) => {
         directed
       );
       dispatch({ type: 'UPDATE_ALGS', payload: checked });
+      dispatch({ type: 'UPDATE_WAIT', payload: 'GET' });
       await axios
-        .post('/spanningTree', {
+        .post('http://127.0.0.1:3003/spanningTree', {
           data: {
             algorithms: checked,
             spanningTreeOptions: {
@@ -156,20 +166,18 @@ const Config = ({ classes, ...props }) => {
               vertexSize,
               stepSpanningType: stepSpanning,
               iterations,
-              directed,
+              directed: !!directed,
+              structSize,
               stealTime: false
             }
           }
         })
         .then((response) => {
-          // console.log(response.data.ejecucion);
-          const ejecucion = response.data.ejecucion;
-          const vals = stats(ejecucion);
-          console.log('Valores para gráfica', vals);
+          const vals = stats(response.data.ejecucion);
           dispatch({ type: 'UPDATE_DATA', payload: vals });
-          // dispatch({type: 'UPDATE_DATA', payload: response.data.ejecu})
+          dispatch({ type: 'UPDATE_WAIT', payload: 'RECEIVED' });
         })
-        .catch((err) => console.log(err));
+        .catch((err) => console.log(err.response));
     }
   };
 
@@ -239,173 +247,189 @@ const Config = ({ classes, ...props }) => {
             className={classes.fullDiv}
             style={{ minWidth: '100%' }}>
             <Grid item container>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Typography
                   variant='h6'
                   gutterBottom
-                  style={{ marginLeft: 15 }}>
+                  /* style={{ marginLeft: '20%' }} */
+                >
                   Opciones
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12}>
+                <FormControl className={classes.formControl} variant='outlined'>
+                  <InputLabel id='experimentos-select-label'>
+                    Experimentos
+                  </InputLabel>
+                  <Select
+                    labelId='experimentos-select-label'
+                    value={experimento}
+                    onChange={handleChangeAlg}
+                    label='Experimentos'>
+                    <MenuItem value=''>Selecciona una opción</MenuItem>
+                    <MenuItem value='SPANNING_TREE'>Spanning Tree</MenuItem>
+                    <MenuItem value='putSteals'>Puts steals</MenuItem>
+                    <MenuItem value='putTakes'>Puts takes</MenuItem>
+                    <MenuItem value='putTakesSteals'>
+                      Puts takes steals
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              {state.variant === 0 ? null : state.variant === 1 ? (
+                <React.Fragment>
+                  <Grid item xs={12}>
+                    <FormControl
+                      className={classes.formControl}
+                      variant='outlined'>
+                      <InputLabel id='sst-exp'>Step Spanning Tree</InputLabel>
+                      <Select
+                        id='select-sst'
+                        value={stepSpanning}
+                        onChange={handleChangeSS}
+                        label='Step Spanning Tree'>
+                        <MenuItem value=''>Selecciona una opción</MenuItem>
+                        <MenuItem value='COUNTER'>Counter</MenuItem>
+                        <MenuItem value='DOUBLE_COLLECT'>
+                          Double Collect
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl
+                      className={classes.formControl}
+                      variant='outlined'>
+                      <InputLabel id='graph-exp'>Gráfica</InputLabel>
+                      <Select
+                        id='select-graph'
+                        value={grafica}
+                        onChange={handleChangeGraph}
+                        label='Gráfica'>
+                        <MenuItem value=''>Selecciona una opción</MenuItem>
+                        <MenuItem value='TORUS_2D'>Torus 2D</MenuItem>
+                        <MenuItem value='TORUS_2D_60'>Torus 2D 60%</MenuItem>
+                        <MenuItem value='TORUS_3D'>Torus 3D</MenuItem>
+                        <MenuItem value='TORUS_3D_40'>Torus 3D 40%</MenuItem>
+                        <MenuItem value='RANDOM'>Random</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={vertexSize}
+                      label='Vertex Size'
+                      type='number'
+                      onChange={(event) => setVertexSize(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={iterations}
+                      label='Iterations'
+                      type='number'
+                      onChange={(event) => setIterations(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={structSize}
+                      label='Struct Size'
+                      type='number'
+                      onChange={(event) => setStructSize(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      className={classes.formControl}
+                      labelPlacement='end'
+                      label='Directed'
+                      control={
+                        <Checkbox
+                          checked={directed}
+                          onChange={handleChangeDirected}
+                          inputProps={{ 'aria-label': 'primary checkbox' }}
+                        />
+                      }
+                    />
+                  </Grid>
+                </React.Fragment>
+              ) : state.variant === 2 ? (
+                <React.Fragment>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={operations}
+                      label='Operations'
+                      type='number'
+                      onChange={(event) => setOperations(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={dsSize}
+                      label='DataStructure Size'
+                      type='number'
+                      onChange={(event) => setDsSize(event.target.value)}
+                    />
+                  </Grid>
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={operations}
+                      label='Operations'
+                      type='number'
+                      onChange={(event) => setOperations(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={workers}
+                      label='Workers'
+                      type='number'
+                      onChange={(event) => setWorkers(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={stealers}
+                      label='Stealers'
+                      type='number'
+                      onChange={(event) => setStealers(event.target.value)}
+                    />
+                  </Grid>
+                </React.Fragment>
+              )}
+              <Grid item xs={12}>
                 <Button
                   variant='contained'
                   color='secondary'
-                  size='small'
-                  disabled={opcionesAlg === 0}
-                  style={{ marginLeft: 30 }}
+                  /* size='small' */
+                  disabled={state.variant === 0}
+                  style={{ marginLeft: 7 }}
                   onClick={onSubmitExperiment}>
                   Ejecutar
                 </Button>
               </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <FormControl className={classes.formControl} variant='outlined'>
-                <InputLabel id='experimentos-select-label'>
-                  Experimentos
-                </InputLabel>
-                <Select
-                  labelId='experimentos-select-label'
-                  value={experimento}
-                  onChange={handleChangeAlg}
-                  label='Experimentos'>
-                  <MenuItem value=''>Selecciona una opción</MenuItem>
-                  <MenuItem value='SPANNING_TREE'>Spanning Tree</MenuItem>
-                  <MenuItem value='putSteals'>Puts steals</MenuItem>
-                  <MenuItem value='putTakes'>Puts takes</MenuItem>
-                  <MenuItem value='putTakesSteals'>Puts takes steals</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            {opcionesAlg === 0 ? null : opcionesAlg === 1 ? (
-              <React.Fragment>
-                <Grid item xs={12}>
-                  <FormControl
-                    className={classes.formControl}
-                    variant='outlined'>
-                    <InputLabel id='sst-exp'>Step Spanning Tree</InputLabel>
-                    <Select
-                      id='select-sst'
-                      value={stepSpanning}
-                      onChange={handleChangeSS}
-                      label='Step Spanning Tree'>
-                      <MenuItem value=''>Selecciona una opción</MenuItem>
-                      <MenuItem value='COUNTER'>Counter</MenuItem>
-                      <MenuItem value='DOUBLE_COLLECT'>Double Collect</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControl
-                    className={classes.formControl}
-                    variant='outlined'>
-                    <InputLabel id='graph-exp'>Gráfica</InputLabel>
-                    <Select
-                      id='select-graph'
-                      value={grafica}
-                      onChange={handleChangeGraph}
-                      label='Gráfica'>
-                      <MenuItem value=''>Selecciona una opción</MenuItem>
-                      <MenuItem value='TORUS_2D'>Torus 2D</MenuItem>
-                      <MenuItem value='TORUS_2D_60'>Torus 2D 60%</MenuItem>
-                      <MenuItem value='TORUS_3D'>Torus 3D</MenuItem>
-                      <MenuItem value='TORUS_3D_40'>Torus 3D 40%</MenuItem>
-                      <MenuItem value='RANDOM'>Random</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={vertexSize}
-                    label='Vertex Size'
-                    type='number'
-                    onChange={(event) => setVertexSize(event.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={iterations}
-                    label='Iterations'
-                    type='number'
-                    onChange={(event) => setIterations(event.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    className={classes.formControl}
-                    labelPlacement='end'
-                    label='Directed'
-                    control={
-                      <Checkbox
-                        checked={directed}
-                        onChange={handleChangeDirected}
-                        inputProps={{ 'aria-label': 'primary checkbox' }}
-                      />
-                    }
-                  />
-                </Grid>
-              </React.Fragment>
-            ) : opcionesAlg === 2 ? (
-              <React.Fragment>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={operations}
-                    label='Operations'
-                    type='number'
-                    onChange={(event) => setOperations(event.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={dsSize}
-                    label='DataStructure Size'
-                    type='number'
-                    onChange={(event) => setDsSize(event.target.value)}
-                  />
-                </Grid>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={operations}
-                    label='Operations'
-                    type='number'
-                    onChange={(event) => setOperations(event.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={workers}
-                    label='Workers'
-                    type='number'
-                    onChange={(event) => setWorkers(event.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    variant='outlined'
-                    style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
-                    value={stealers}
-                    label='Stealers'
-                    type='number'
-                    onChange={(event) => setStealers(event.target.value)}
-                  />
-                </Grid>
-              </React.Fragment>
-            )}
           </Paper>
         </Grid>
       </Grid>
