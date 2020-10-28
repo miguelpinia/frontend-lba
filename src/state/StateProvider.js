@@ -32,7 +32,9 @@ const initialState = {
     NEW_B_WS_NC_MULT: '#4FCBBB',
     NEW_B_WS_NC_MULT_LA: '#2994CC'
   },
-  rawResponse: {}
+  rawResponse: {},
+  wait: 'WAIT',
+  variant: 0
 };
 
 const reducer = (state, action) => {
@@ -43,6 +45,10 @@ const reducer = (state, action) => {
       return { ...state, algs: action.payload };
     case 'UPDATE_RAW':
       return { ...state, rawResponse: action.payload };
+    case 'UPDATE_WAIT':
+      return { ...state, wait: action.payload };
+    case 'UPDATE_VARIANT':
+      return { ...state, variant: action.payload };
     default:
       throw new Error(`Acción no soportada ${action.type}`);
   }
