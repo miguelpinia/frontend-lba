@@ -14,7 +14,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend
+  Legend,
+  Bar,
+  BarChart
 } from 'recharts';
 import { StateContext } from 'state/StateProvider';
 
@@ -33,7 +35,10 @@ const Basic = ({ data, state, ...props }) => {
         }}>
         <CartesianGrid strokeDasharray='3 3' />
         <XAxis dataKey='name' padding={{ left: 50, right: 50 }} />
-        <YAxis domain={['auto', 'auto']} />
+        <YAxis
+          domain={['auto', 'auto']}
+          label={{ value: 'nanoseconds', angle: -90, position: 'insideLeft' }}
+        />
         <Tooltip />
         <Legend verticalAlign='top' height={36} />
 
@@ -46,6 +51,113 @@ const Basic = ({ data, state, ...props }) => {
           />
         ))}
       </LineChart>
+    </React.Fragment>
+  );
+};
+
+const BarPutsSteal = ({ state, ...props }) => {
+  const data = state.bardata?.map((d) => ({
+    name: d.Alg,
+    put: d.put_time,
+    steal: d.steal_time,
+    total: d.total_time
+  }));
+  return (
+    <React.Fragment>
+      <BarChart
+        width={1100}
+        height={500}
+        data={data}
+        margin={{
+          top: 5,
+          right: 30,
+          left: 20,
+          bottom: 30
+        }}>
+        <CartesianGrid strokeDasharray='3 3' />
+        <XAxis dataKey='name' padding={{ left: 50, right: 50 }} />
+        <YAxis
+          domain={['auto', 'auto']}
+          label={{ value: 'nanoseconds', angle: -90, position: 'insideLeft' }}
+        />
+        <Tooltip />
+        <Legend verticalAlign='top' height={36} />
+        <Bar dataKey='put' fill='#8884d8' />
+        <Bar dataKey='steal' fill='#82ca9d' />
+        <Bar dataKey='total' fill='#829d' />
+      </BarChart>
+    </React.Fragment>
+  );
+};
+
+const BarPutsTakes = ({ state, ...props }) => {
+  const data = state.bardata?.map((d) => ({
+    name: d.Alg,
+    puts: d.put_time,
+    takes: d.take_time,
+    total: d.total_time
+  }));
+  return (
+    <React.Fragment>
+      <BarChart
+        width={1050}
+        height={500}
+        data={data}
+        margin={{
+          top: 5,
+          right: 30,
+          left: 20,
+          bottom: 30
+        }}>
+        <CartesianGrid strokeDasharray='3 3' />
+        <XAxis dataKey='name' padding={{ left: 50, right: 50 }} />
+        <YAxis
+          domain={['auto', 'auto']}
+          label={{ value: 'nanoseconds', angle: -90, position: 'insideLeft' }}
+        />
+        <Tooltip />
+        <Legend verticalAlign='top' height={36} />
+        <Bar dataKey='puts' fill='#8884d8' />
+        <Bar dataKey='takes' fill='#82ca9d' />
+        <Bar dataKey='total' fill='#829d' />
+      </BarChart>
+    </React.Fragment>
+  );
+};
+
+const BarPutsTakesSteals = ({ state, ...props }) => {
+  const data = state.bardata?.map((d) => ({
+    name: d.Alg,
+    puts: d.put_time,
+    takes: d.take_time,
+    steals: d.steal_time,
+    total: d.total_time
+  }));
+  return (
+    <React.Fragment>
+      <BarChart
+        width={1100}
+        height={500}
+        data={data}
+        margin={{
+          top: 5,
+          right: 30,
+          left: 20,
+          bottom: 30
+        }}>
+        <CartesianGrid strokeDasharray='3 3' />
+        <XAxis dataKey='name' padding={{ left: 50, right: 50 }} />
+        <YAxis
+          domain={['auto', 'auto']}
+          label={{ value: 'nanoseconds', angle: -90, position: 'insideLeft' }}
+        />
+        <Tooltip />
+        <Legend verticalAlign='top' height={36} />
+        <Bar dataKey='puts' fill='#8884d8' />
+        <Bar dataKey='takes' fill='#82ca9d' />
+        <Bar dataKey='steals' fill='#82ca' />
+        <Bar dataKey='total' fill='#829d' />
+      </BarChart>
     </React.Fragment>
   );
 };
@@ -104,7 +216,7 @@ const Grafica = ({ classes, ...props }) => {
         break;
       default:
     }
-  }, [state.data, tipo, state.wait]);
+  }, [state.data, tipo, state.wait, dispatch]);
 
   return (
     <React.Fragment>
@@ -125,7 +237,7 @@ const Grafica = ({ classes, ...props }) => {
                 </div>
               </Grid>
             </React.Fragment>
-          ) : (
+          ) : state.variant === 1 ? (
             <React.Fragment>
               <Grid item xs={12} sm={6}>
                 <Typography variant='h6' gutterBottom>
@@ -151,6 +263,47 @@ const Grafica = ({ classes, ...props }) => {
               </Grid>
               <Grid item xs={12}>
                 <Basic state={state} data={data} />
+              </Grid>
+            </React.Fragment>
+          ) : state.variant === 2 ? (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant='h6' gutterBottom>
+                  Puts & Steals
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <BarPutsSteal data={data} state={state} />
+              </Grid>
+            </React.Fragment>
+          ) : state.variant === 3 ? (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant='h6' gutterBottom>
+                  Puts & Takes
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <BarPutsTakes state={state} />
+              </Grid>
+            </React.Fragment>
+          ) : state.variant === 4 ? (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant='h6' gutterBottom>
+                  Puts, Takes & Steals
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <BarPutsTakesSteals state={state} />
+              </Grid>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant='h6' gutterBottom>
+                  Gráficas de resultados
+                </Typography>
               </Grid>
             </React.Fragment>
           )}

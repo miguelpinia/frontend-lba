@@ -91,16 +91,15 @@ const stats = (results) => {
 const Config = ({ classes, ...props }) => {
   const [experimento, setExperimento] = React.useState('');
   const [checked, setChecked] = React.useState([]);
-  const [opcionesAlg, setOpcionesAlg] = React.useState(0);
   const [grafica, setGrafica] = React.useState('');
   const [directed, setDirected] = React.useState(null);
   const [stepSpanning, setStepSpanning] = React.useState('');
   const [vertexSize, setVertexSize] = React.useState(0);
   const [iterations, setIterations] = React.useState(5);
-  const [operations, setOperations] = React.useState();
-  const [dsSize, setDsSize] = React.useState();
-  const [workers, setWorkers] = React.useState();
-  const [stealers, setStealers] = React.useState();
+  const [operations, setOperations] = React.useState(1000000);
+  const [dsSize, setDsSize] = React.useState(4096);
+  const [workers, setWorkers] = React.useState(3);
+  const [stealers, setStealers] = React.useState(3);
   const [structSize, setStructSize] = React.useState(4096);
   const context = React.useContext(StateContext);
   const state = context.state;
@@ -135,26 +134,17 @@ const Config = ({ classes, ...props }) => {
       dispatch({ type: 'UPDATE_VARIANT', payload: 0 });
     else if (event.target.value === 'SPANNING_TREE')
       dispatch({ type: 'UPDATE_VARIANT', payload: 1 });
-    else if (
-      event.target.value === 'putSteals' ||
-      event.target.value === 'putTakes'
-    )
+    else if (event.target.value === 'putSteals')
       dispatch({ type: 'UPDATE_VARIANT', payload: 2 });
-    else dispatch({ type: 'UPDATE_VARIANT', payload: 3 });
+    else if (event.target.value === 'putTakes')
+      dispatch({ type: 'UPDATE_VARIANT', payload: 3 });
+    else dispatch({ type: 'UPDATE_VARIANT', payload: 4 });
   };
 
   const onSubmitExperiment = async () => {
+    dispatch({ type: 'UPDATE_ALGS', payload: checked });
+    dispatch({ type: 'UPDATE_WAIT', payload: 'GET' });
     if (state.variant === 1) {
-      console.log(
-        checked,
-        stepSpanning,
-        grafica,
-        vertexSize,
-        iterations,
-        directed
-      );
-      dispatch({ type: 'UPDATE_ALGS', payload: checked });
-      dispatch({ type: 'UPDATE_WAIT', payload: 'GET' });
       await axios
         .post('http://127.0.0.1:3003/spanningTree', {
           data: {
@@ -173,6 +163,65 @@ const Config = ({ classes, ...props }) => {
         .then((response) => {
           const vals = stats(response.data.ejecucion);
           dispatch({ type: 'UPDATE_DATA', payload: vals });
+          dispatch({ type: 'UPDATE_WAIT', payload: 'RECEIVED' });
+        })
+        .catch((err) => console.log(err.response));
+    } else if (state.variant === 2) {
+      await axios
+        .post('http://127.0.0.1:3003/putsSteals', {
+          data: {
+            algorithms: checked,
+            putSteals: {
+              operations,
+              size: dsSize
+            }
+          }
+        })
+        .then((response) => {
+          dispatch({
+            type: 'UPDATE_BARDATA',
+            payload: response.data.ejecucion
+          });
+          dispatch({ type: 'UPDATE_WAIT', payload: 'RECEIVED' });
+        })
+        .catch((err) => console.log(err.response));
+    } else if (state.variant === 3) {
+      await axios
+        .post('http://127.0.0.1:3003/putsTakes', {
+          data: {
+            algorithms: checked,
+            putTakes: {
+              operations,
+              size: dsSize
+            }
+          }
+        })
+        .then((response) => {
+          dispatch({
+            type: 'UPDATE_BARDATA',
+            payload: response.data.ejecucion
+          });
+          dispatch({ type: 'UPDATE_WAIT', payload: 'RECEIVED' });
+        })
+        .catch((err) => console.log(err.response));
+    } else if (state.variant === 4) {
+      await axios
+        .post('http://127.0.0.1:3003/putsTakesSteals', {
+          data: {
+            algorithms: checked,
+            putsTakesSteals: {
+              workers,
+              stealers,
+              operations,
+              size: dsSize
+            }
+          }
+        })
+        .then((response) => {
+          dispatch({
+            type: 'UPDATE_BARDATA',
+            payload: response.data.ejecucion.results
+          });
           dispatch({ type: 'UPDATE_WAIT', payload: 'RECEIVED' });
         })
         .catch((err) => console.log(err.response));
@@ -360,6 +409,29 @@ const Config = ({ classes, ...props }) => {
                   </Grid>
                 </React.Fragment>
               ) : state.variant === 2 ? (
+                <React.Fragment>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={operations}
+                      label='Operations'
+                      type='number'
+                      onChange={(event) => setOperations(event.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      variant='outlined'
+                      style={{ width: '95%', marginLeft: 8, marginTop: 15 }}
+                      value={dsSize}
+                      label='DataStructure Size'
+                      type='number'
+                      onChange={(event) => setDsSize(event.target.value)}
+                    />
+                  </Grid>
+                </React.Fragment>
+              ) : state.variant === 3 ? (
                 <React.Fragment>
                   <Grid item xs={12}>
                     <TextField
